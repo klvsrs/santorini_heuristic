@@ -21,7 +21,7 @@ def gen_starting_state(n):
 
 
 def gen_god():
-    return ['Appolo', 'Atlas']
+    return ['Apollo', 'Atlas']
 
 
 def gen_place_worker(state):
@@ -41,6 +41,12 @@ def get_worker_loc(state, worker_id):
                 return i,j
 
 
+def get_player_god(state, player_id):
+    for i in range(len(state[3])):
+        if state[3][i][0] == player_id:
+            return state[3][i][1]
+
+
 def gen_worker_move(state):
     action_list = []
     for w in range(2):
@@ -50,6 +56,19 @@ def gen_worker_move(state):
             for y in [-1, 0, 1]:
                 if 0 <= i + x <= 4 and 0 <= j + y <= 4 and not (x == 0 and y == 0):
                     if state[5][i+x][j+y] == '' and state[4][i+x][j+y] != 4 and (state[4][i][j]+1 == state[4][i+x][j+y] or state[4][i][j] >= state[4][i+x][j+y]):
+                        action_list.append([worker_id, i+x, j+y])
+    return action_list
+
+
+def gen_worker_move_apollo(state):
+    action_list = []
+    for w in range(2):
+        worker_id = state[0]+'w'+str(w+1)
+        i, j = get_worker_loc(state, worker_id)
+        for x in [-1, 0, 1]:
+            for y in [-1, 0, 1]:
+                if 0 <= i + x <= 4 and 0 <= j + y <= 4 and not (x == 0 and y == 0):
+                    if state[5][i+x][j+y] != state[0]+'w1' and state[5][i+x][j+y] != state[0]+'w2' and state[4][i+x][j+y] != 4 and (state[4][i][j]+1 == state[4][i+x][j+y] or state[4][i][j] >= state[4][i+x][j+y]):
                         action_list.append([worker_id, i+x, j+y])
     return action_list
 
@@ -66,15 +85,34 @@ def gen_worker_build(state):
     return action_list
 
 
+def gen_worker_build_atlas(state):
+    action_list = []
+    worker_id = state[2]
+    i, j = get_worker_loc(state, worker_id)
+    for x in [-1, 0, 1]:
+        for y in [-1, 0, 1]:
+            if 0 <= i + x <= 4 and 0 <= j + y <= 4 and not (x == 0 and y == 0):
+                if state[5][i+x][j+y] == '' and state[4][i+x][j+y] != 4:
+                    action_list.append([i+x, j+y, True])
+                    action_list.append([i+x, j+y, False])
+    return action_list
+
+
 def gen_valid_moves(state):
     if state[1] == 'pick god':
         return gen_god()
     elif state[1] == 'place worker':
         return gen_place_worker(state)
     elif state[1] == 'move':
-        return gen_worker_move(state)
+        if get_player_god(state, state[0]) == 'Apollo':
+            return gen_worker_move_apollo(state)
+        else:
+            return gen_worker_move(state)
     elif state[1] == 'build':
-        return gen_worker_build(state)
+        if get_player_god(state, state[0]) == 'Atlas':
+            return gen_worker_build_atlas(state)
+        else:
+            return gen_worker_build(state)
 
 
 def next_player(state):
@@ -110,8 +148,71 @@ def f_heuristic(state, list_action, action):
                     heuristic = 1
                 elif target_height == 1:
                     heuristic = 2
+                elif target_height == 2:
+                    heuristic = 5
+            if target_height == 3:
+                i, j = list_action[action][0], list_action[action][1]
+                for x in [-1, 0, 1]:
+                    for y in [-1, 0, 1]:
+                        if 0 <= i + x <= 4 and 0 <= j + y <= 4 and not (x == 0 and y == 0):
+                            if state[5][i+x][j+y] != '' and state[5][i+x][j+y] != state[0]+'w1' and state[5][i+x][j+y] != state[0]+'w2':
+                                heuristic = heuristic+10
+    return heuristic
+
+
+def f_heuristic_god(state, list_action, action):
+    heuristic = 0
+    if len(list_action) != 0:
+        if state[1] == 'move':
+            target_height = state[4][list_action[action][1]][list_action[action][2]]
+            target_worker = state[5][list_action[action][1]][list_action[action][2]]
+            if target_worker == '':
+                #normal power
+                if target_height == 0:
+                    heuristic = 1
+                elif target_height == 1:
+                    heuristic = 2
+                elif target_height == 2:
+                    heuristic = 5
+                elif target_height == 3:
+                    heuristic = 100
+            else:
+                #apollo
+                if target_height == 0:
+                    heuristic = 1
                 elif target_height == 1:
                     heuristic = 5
+                elif target_height == 2:
+                    heuristic = 10
+                elif target_height == 3:
+                    heuristic = 100
+        elif state[1] == 'build':
+            i, j = get_worker_loc(state, state[2])
+            current_height = state[4][i][j]
+            target_height = state[4][list_action[action][0]][list_action[action][1]]
+            if current_height == target_height:
+                if target_height == 0:
+                    heuristic = 1
+                elif target_height == 1:
+                    heuristic = 2
+                elif target_height == 2:
+                    heuristic = 5
+            if target_height == 3:
+                i, j = list_action[action][0], list_action[action][1]
+                for x in [-1, 0, 1]:
+                    for y in [-1, 0, 1]:
+                        if 0 <= i + x <= 4 and 0 <= j + y <= 4 and not (x == 0 and y == 0):
+                            if state[5][i+x][j+y] != '' and state[5][i+x][j+y] != state[0]+'w1' and state[5][i+x][j+y] != state[0]+'w2':
+                                heuristic = heuristic+10
+            if len(list_action[action]) == 3:
+                #if dome for atlas
+                if list_action[action][2]:
+                    i, j = list_action[action][0], list_action[action][1]
+                    for x in [-1, 0, 1]:
+                        for y in [-1, 0, 1]:
+                            if 0 <= i + x <= 4 and 0 <= j + y <= 4 and not (x == 0 and y == 0):
+                                if state[5][i+x][j+y] != '' and state[5][i+x][j+y] != state[0]+'w1' and state[5][i+x][j+y] != state[0]+'w2':
+                                    heuristic = heuristic+20
     return heuristic
 
 
