@@ -82,8 +82,10 @@ def draw_heuristic_info(term, s):
         print('Action Choosen: '+str(s[6]))
         for i in range(len(s[7])):
             joined_str = ','.join([str(item) for item in s[7][i]])
-            print(str(i)+':'+joined_str+' HVal:' + str(s[8][i]))
-
+            if len(s[8])>1:
+                print(str(i)+':'+joined_str+' HVal:' + str(s[8][i]))
+            else:
+                print(str(i)+':'+joined_str+' HVal: 0')
 def clear_screen():
     term = Terminal()
     print(term.home + term.clear)
