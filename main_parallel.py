@@ -5,7 +5,7 @@ from random import choice
 from random import randint
 from tqdm import tqdm
 
-def run_single_game(p1_func,p2_func):
+def run_single_game(p1_func, p2_func):
     s = gameEngine.gen_starting_state(2)
     latch = True
     p1_win = 0
@@ -62,21 +62,37 @@ def run_single_game(p1_func,p2_func):
             else:
                 p2_win = p2_win + 1
             latch = False
-    return (p1_func,p2_func,p1_win,p2_win)
+    return p1_win, p2_win
+
+
+def run_games_batch(start_index, end_index):
+    results = []
+    for index in range(start_index, end_index):
+        p1_func, p2_func = player_pairs[index]
+        p1_win, p2_win = run_single_game(p1_func, p2_func)  # A function to simulate a batch of games and return results
+        results.append((p1_func, p2_func, p1_win, p2_win))
+    return results
 
 
 random.seed(101)
 function_name = ['random','norm heuristic','god heuristic']
 function_arr = [0,1,2]
-game_max = 100000
-player_pairs = []
-for p1 in range(len(function_arr)):
-    for p2 in range(len(function_arr)):
-        for i in range(game_max):
-            player_pairs.append((p1,p2))
+game_max = 10000000
+batch_size = 10000
+player_pairs = [(p1, p2) for p1 in range(len(function_name)) for p2 in range(len(function_name)) for i in range(game_max)]
+indices = list(range(len(player_pairs)))
+num_batches = len(player_pairs) // batch_size + (1 if len(player_pairs) % batch_size != 0 else 0)
 
-with concurrent.futures.ProcessPoolExecutor(max_workers=4) as executor:
-    results = list(tqdm(executor.map(run_single_game, *zip(*player_pairs)), total=len(player_pairs)))
+print('Total Games: '+str(game_max*9))
+print('Batch Size : '+str(batch_size))
+
+with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
+    future_to_batch = {executor.submit(run_games_batch, i * batch_size, min((i + 1) * batch_size, len(player_pairs))): i for i in range(num_batches)}
+    results = []
+    for future in tqdm(concurrent.futures.as_completed(future_to_batch), total=len(future_to_batch)):
+        batch_result = future.result()
+        results.extend(batch_result)
+
     sum_arr = [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[2,2]]
     sum_cnt_p1 = [0,0,0,0,0,0,0,0,0]
     sum_cnt_p2 = [0,0,0,0,0,0,0,0,0]
