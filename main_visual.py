@@ -94,7 +94,7 @@ def clear_screen():
 if __name__ == '__main__':
     term = Terminal()
     with term.fullscreen(), term.cbreak(), term.hidden_cursor():
-        file_loc = 'saved_state/game_state_1_0_0.pkl'
+        file_loc = 'saved_state/game_state_1_0_7.pkl'
         s = load_from_pickle(file_loc)
         show_index = 0
         draw_info(term,show_index,s[show_index][0],s[show_index][1],s[show_index][2],s[show_index][3][0][1],s[show_index][3][1][1])
